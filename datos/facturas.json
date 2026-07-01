@@ -1,6 +1,20 @@
 {
   "facturas": [
     {
+      "id": 1782868656479.0852,
+      "tipo": "Factura C",
+      "numero": "00002-00001080",
+      "fecha": "2026-05-29",
+      "cliente": "OSDE ORGANIZACION DE SERVICIOS DIRECTOS  EMPRESARIOS",
+      "cuit": "27289074002",
+      "iva": "IVA Responsable Inscripto",
+      "importe": 201564,
+      "moneda": "ARS",
+      "pago": "Cuenta Corriente",
+      "obraSocial": "",
+      "obs": ""
+    },
+    {
       "id": 1782868624055.3325,
       "tipo": "Factura C",
       "numero": "00002-00001097",
