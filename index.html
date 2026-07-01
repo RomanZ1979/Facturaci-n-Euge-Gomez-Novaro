@@ -378,27 +378,27 @@ function today(){ return new Date().toISOString().split('T')[0]; }
 // ── GITHUB SYNC ───────────────────────────────────────────────────────────────
 async function cargarDeGitHub(){
   setSyncStatus('⏳ Cargando datos…','');
+  // Leer via URL pública (no requiere token)
+  const RAW_URL = 'https://raw.githubusercontent.com/RomanZ1979/Facturaci-n-Euge-Gomez-Novaro/main/datos/facturas.json?t='+Date.now();
   try{
-    const res = await fetch(GH_API, {
-      headers:{ Authorization:`token ${GH_TOKEN}`, Accept:'application/vnd.github.v3+json' }
-    });
+    const res = await fetch(RAW_URL);
     if(res.status===404){
-      // Archivo no existe aún — empezamos con DB vacía
-      ghSHA = null;
-      DB = [];
+      ghSHA = null; DB = [];
       setSyncStatus('✅ Listo — sin facturas aún','ok');
     } else if(!res.ok){
       throw new Error(`HTTP ${res.status}`);
     } else {
       const data = await res.json();
-      ghSHA = data.sha;
-      const content = JSON.parse(atob(data.content.replace(/\n/g,'')));
-      DB = content.facturas || [];
+      DB = data.facturas || [];
+      // Obtener SHA para poder escribir después
+      const res2 = await fetch(GH_API, {
+        headers:{ Authorization:`token ${GH_TOKEN}`, Accept:'application/vnd.github.v3+json' }
+      });
+      if(res2.ok){ const d2=await res2.json(); ghSHA=d2.sha; }
       setSyncStatus(`✅ ${DB.length} facturas cargadas`,'ok');
     }
   } catch(err){
     setSyncStatus(`❌ Error al cargar: ${err.message}`,'err');
-    // Fallback a localStorage
     const local = localStorage.getItem('facturas_euge_gh');
     if(local){ DB = JSON.parse(local); setSyncStatus(`⚠️ Sin conexión — usando datos locales (${DB.length} facturas)`,''); }
   }
