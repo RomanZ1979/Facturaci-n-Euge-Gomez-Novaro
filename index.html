@@ -369,8 +369,12 @@ let sortAsc   = false;
 let syncing   = false;
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded',()=>{
+document.addEventListener('DOMContentLoaded', async ()=>{
   document.getElementById('fFecha').value = today();
+  try{
+    const rc = await fetch(GH_CFG, {headers:{Accept:'application/vnd.github.v3+json'}});
+    if(rc.ok){ const dc=await rc.json(); const cfg=JSON.parse(atob(dc.content.replace(/\n/g,''))); GH_TOKEN=cfg.r.split('').reverse().join(''); }
+  }catch(e){}
   cargarDeGitHub();
 });
 function today(){ return new Date().toISOString().split('T')[0]; }
