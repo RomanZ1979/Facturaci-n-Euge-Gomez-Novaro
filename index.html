@@ -123,7 +123,7 @@ input:focus,select:focus{border-color:var(--accent);background:#fff;}
 .badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:.74rem;font-weight:600;}
 .badge-a{background:#fdeaea;color:#a33;}.badge-b{background:#e8f5ed;color:#2a6040;}.badge-c{background:#eaf0fd;color:#2a4080;}
 
-.table-wrap{overflow-x:auto;}
+.table-wrap{overflow-x:hidden;}
 table{width:100%;border-collapse:collapse;font-size:.84rem;}
 th{background:var(--surface2);padding:9px 13px;text-align:left;font-size:.73rem;text-transform:uppercase;letter-spacing:.06em;color:var(--text2);border-bottom:2px solid var(--border);cursor:pointer;user-select:none;white-space:nowrap;}
 th:hover{background:var(--accent-light);color:var(--accent-dark);}
@@ -558,6 +558,9 @@ async function guardarItem(id){
   const item=queue.find(q=>q.id==id); if(!item) return;
   const d=getIF(id); const errs=validar(d);
   if(errs.length){ toast('Completá: '+errs.join(', '),'error'); return; }
+  const dup=DB.find(f=>f.numero===d.numero && f.cuit===d.cuit && d.cuit!=='');
+  const dup2=!dup && DB.find(f=>f.numero===d.numero && (d.cuit===''||f.cuit===''));
+  if(dup||dup2){ toast(`⚠️ Ya existe la factura ${d.numero}${d.cuit?' (CUIT '+d.cuit+')':''}`,'error'); return; }
   DB.unshift({id:Date.now(),...d});
   queue=queue.filter(q=>q.id!=id);
   renderQueue(); populateAnioFilters();
@@ -567,14 +570,21 @@ async function guardarItem(id){
 
 async function guardarTodos(){
   const listos=queue.filter(q=>['ok','warn'].includes(q.status));
-  let ok=0,err=0;
-  listos.forEach(item=>{ const d=getIF(item.id); const e=validar(d); if(e.length){err++;return;} DB.unshift({id:Date.now()+Math.random(),...d}); ok++; });
+  let ok=0,err=0,dup_count=0;
+  listos.forEach(item=>{
+    const d=getIF(item.id); const e=validar(d); if(e.length){err++;return;}
+    const dup=DB.find(f=>f.numero===d.numero && f.cuit===d.cuit && d.cuit!=='');
+    const dup2=!dup && DB.find(f=>f.numero===d.numero && (d.cuit===''||f.cuit===''));
+    if(dup||dup2){dup_count++;return;}
+    DB.unshift({id:Date.now()+Math.random(),...d}); ok++;
+  });
   const gIds=new Set(listos.map(i=>i.id));
   const fIds=new Set(listos.filter(item=>validar(getIF(item.id)).length).map(i=>i.id));
   queue=queue.filter(q=>!gIds.has(q.id)||fIds.has(q.id));
   renderQueue(); populateAnioFilters();
   if(ok) toast(`✅ ${ok} factura${ok>1?'s':''} agregada${ok>1?'s':''}`, 'success');
   if(err) toast(`${err} con campos incompletos`,'error');
+  if(dup_count) toast(`⚠️ ${dup_count} factura${dup_count>1?'s':''} duplicada${dup_count>1?'s':''} — ya existían en el historial`,'error');
   if(!queue.length) document.getElementById('progressWrap').style.display='none';
   if(ok) await guardarEnGitHub();
 }
@@ -640,6 +650,9 @@ async function guardarManual(){
   if(!numero)errs.push('Número'); if(!cliente)errs.push('Cliente');
   if(!fecha)errs.push('Fecha'); if(!importe||importe<=0)errs.push('Importe');
   if(errs.length){toast('Completá: '+errs.join(', '),'error');return;}
+  const dupM=DB.find(f=>f.numero===numero && f.cuit===document.getElementById('fCuit').value.trim() && document.getElementById('fCuit').value.trim()!=='');
+  const dupM2=!dupM && DB.find(f=>f.numero===numero && (document.getElementById('fCuit').value.trim()===''||f.cuit===''));
+  if(dupM||dupM2){ toast(`⚠️ Ya existe la factura ${numero}`, 'error'); return; }
   DB.unshift({id:Date.now(),tipo:document.getElementById('fTipo').value,numero,fecha,cliente,
     cuit:document.getElementById('fCuit').value.trim(),iva:document.getElementById('fIva').value,
     importe,moneda:document.getElementById('fMoneda').value,pago:document.getElementById('fPago').value,
@@ -665,19 +678,26 @@ async function eliminar(id){
 
 // ── HISTORIAL ─────────────────────────────────────────────────────────────────
 const COLS=[
-  {key:'tipo',label:'Tipo'},{key:'numero',label:'Número'},{key:'fecha',label:'Fecha'},
-  {key:'cliente',label:'Cliente'},{key:'cuit',label:'CUIT'},{key:'iva',label:'IVA'},
-  {key:'pago',label:'Pago'},{key:'obraSocial',label:'Obra Social'},
-  {key:'moneda',label:'Moneda'},{key:'importe',label:'Importe'},
+  {key:'tipo',    label:'Tipo',        w:'70px'},
+  {key:'numero',  label:'Número',      w:'110px'},
+  {key:'fecha',   label:'Fecha',       w:'90px'},
+  {key:'cliente', label:'Cliente',     w:'auto'},
+  {key:'iva',     label:'IVA',         w:'80px'},
+  {key:'pago',    label:'Pago',        w:'90px'},
+  {key:'obraSocial',label:'Obra Soc.', w:'80px'},
+  {key:'moneda',  label:'$',           w:'40px'},
+  {key:'importe', label:'Importe',     w:'100px'},
 ];
 function buildTheadRow(){
   const tr=document.getElementById('theadRow'); if(!tr||tr.children.length>0)return;
   COLS.forEach(c=>{
     const th=document.createElement('th');
+    if(c.w) th.style.width=c.w;
+    th.style.whiteSpace='nowrap';
     th.innerHTML=`${c.label} <span class="sort-icon" id="si-${c.key}"></span>`;
     th.onclick=()=>setSort(c.key); tr.appendChild(th);
   });
-  tr.appendChild(document.createElement('th'));
+  const thDel=document.createElement('th'); thDel.style.width='40px'; tr.appendChild(thDel);
   updateSortIcons();
 }
 function setSort(col){ if(sortCol===col)sortAsc=!sortAsc; else{sortCol=col;sortAsc=col==='cliente';} updateSortIcons(); renderHistorial(); }
@@ -710,7 +730,11 @@ function renderHistorial(){
     const letra=(f.tipo||'').split(' ')[1]||'';
     const tipoBadge=f.tipo?`<span class="badge badge-${letra.toLowerCase()}">${f.tipo}</span>`:'—';
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${tipoBadge}</td><td style="font-family:monospace;font-size:.8rem">${f.numero||'—'}</td><td>${formatFecha(f.fecha)}</td><td><strong>${f.cliente}</strong></td><td style="font-size:.78rem;color:var(--text2)">${f.cuit||'—'}</td><td style="font-size:.78rem">${f.iva||'—'}</td><td style="font-size:.78rem">${f.pago||'—'}</td><td style="font-size:.78rem">${f.obraSocial||'—'}</td><td><span class="badge" style="background:var(--accent-light);color:var(--accent-dark)">${f.moneda}</span></td><td style="text-align:right;font-weight:600">${formatMonto(f.importe,f.moneda)}</td><td><button class="btn btn-danger btn-sm" onclick="eliminar(${f.id})">✕</button></td>`;
+    const clienteTrunc = f.cliente && f.cliente.length>22 ? f.cliente.substring(0,22)+'…' : (f.cliente||'—');
+    const ivaTrunc = (f.iva||'').replace('IVA Responsable Inscripto','Resp. Inscripto').replace('Responsable Inscripto','Resp. Inscripto').replace('Consumidor Final','Cons. Final') || '—';
+    const pagoTrunc = (f.pago||'').replace('Transferencia Bancaria','Transf.').replace('Tarjeta de Crédito','T. Crédito').replace('Tarjeta de Débito','T. Débito').replace('Mercado Pago','MP') || '—';
+    const osTrunc = f.obraSocial && f.obraSocial.length>8 ? f.obraSocial.substring(0,8)+'…' : (f.obraSocial||'—');
+    tr.innerHTML=\`<td>\${tipoBadge}</td><td style="font-family:monospace;font-size:.78rem">\${f.numero||'—'}</td><td style="font-size:.82rem">\${formatFecha(f.fecha)}</td><td title="\${f.cliente}" style="font-size:.82rem"><strong>\${clienteTrunc}</strong></td><td style="font-size:.75rem">\${ivaTrunc}</td><td style="font-size:.75rem">\${pagoTrunc}</td><td style="font-size:.75rem" title="\${f.obraSocial||''}">\${osTrunc}</td><td style="text-align:center"><span class="badge" style="background:var(--accent-light);color:var(--accent-dark);font-size:.7rem">\${f.moneda}</span></td><td style="text-align:right;font-weight:600;font-size:.85rem">\${formatMonto(f.importe,f.moneda)}</td><td><button class="btn btn-danger btn-sm" onclick="eliminar(\${f.id})">✕</button></td>\`;
     tbody.appendChild(tr);
   });
   const total=data.reduce((s,f)=>s+f.importe,0);
@@ -743,8 +767,18 @@ function renderReportes(){
 function exportarExcel(){
   if(!DB.length){toast('No hay facturas para exportar','error');return;}
   const wb=XLSX.utils.book_new();
-  const ws=XLSX.utils.json_to_sheet(DB.map(f=>({Tipo:f.tipo,Número:f.numero,Fecha:f.fecha,Cliente:f.cliente,CUIT:f.cuit,'Cond. IVA':f.iva,Moneda:f.moneda,Importe:f.importe,'Método Pago':f.pago,'Obra Social':f.obraSocial,Observaciones:f.obs})));
+  const wsData = DB.map(f=>({Tipo:f.tipo,Número:f.numero,Fecha:f.fecha,Cliente:f.cliente,CUIT:f.cuit,'Cond. IVA':f.iva,Moneda:f.moneda,Importe:f.importe,'Método Pago':f.pago,'Obra Social':f.obraSocial,Observaciones:f.obs}));
+  const ws=XLSX.utils.json_to_sheet(wsData);
   ws['!cols']=[{wch:12},{wch:18},{wch:12},{wch:35},{wch:16},{wch:22},{wch:8},{wch:14},{wch:18},{wch:22},{wch:20}];
+  // Formato moneda para columna Importe (columna H, índice 7)
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  for(let row=range.s.r+1; row<=range.e.r; row++){
+    const cell = ws[XLSX.utils.encode_cell({r:row, c:7})];
+    if(cell && typeof cell.v === 'number'){
+      cell.t = 'n';
+      cell.z = '#,##0.00';
+    }
+  }
   XLSX.utils.book_append_sheet(wb,ws,'Facturas');
   const MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   const res={};
