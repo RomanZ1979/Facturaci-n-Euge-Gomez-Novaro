@@ -1,6 +1,20 @@
 {
   "facturas": [
     {
+      "id": 1783781167115.9211,
+      "tipo": "Factura C",
+      "numero": "00002-00000984",
+      "fecha": "2025-10-29",
+      "cliente": "NEARSHORE ARGENTINA SA",
+      "cuit": "27289074002",
+      "iva": "IVA Responsable Inscripto",
+      "importe": 2025000,
+      "moneda": "ARS",
+      "pago": "Transferencia Bancaria",
+      "obraSocial": "",
+      "obs": ""
+    },
+    {
       "id": 1783780704006.815,
       "tipo": "Factura C",
       "numero": "00002-00000990",
