@@ -1,6 +1,20 @@
 {
   "facturas": [
     {
+      "id": 1783780575593,
+      "tipo": "Factura C",
+      "numero": "00002-00000980",
+      "fecha": "2025-09-30",
+      "cliente": "APPIO MARIA SOLEDAD",
+      "cuit": "30037579",
+      "iva": "Consumidor Final",
+      "importe": 75764,
+      "moneda": "ARS",
+      "pago": "",
+      "obraSocial": "",
+      "obs": ""
+    },
+    {
       "id": 1783780354602.857,
       "tipo": "Factura C",
       "numero": "00002-00000959",
