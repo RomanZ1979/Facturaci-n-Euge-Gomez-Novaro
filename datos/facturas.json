@@ -1,6 +1,20 @@
 {
   "facturas": [
     {
+      "id": 1783781824881,
+      "tipo": "",
+      "numero": "00002-00001110",
+      "fecha": "2026-07-11",
+      "cliente": "SALLENT ADRIAN",
+      "cuit": "17713456",
+      "iva": "Consumidor Final",
+      "importe": 220000,
+      "moneda": "ARS",
+      "pago": "Transferencia Bancaria",
+      "obraSocial": "",
+      "obs": ""
+    },
+    {
       "id": 1783781444962.122,
       "tipo": "Factura C",
       "numero": "00002-00001046",
